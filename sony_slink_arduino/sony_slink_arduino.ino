@@ -1,4 +1,8 @@
-#define DEBUG_PULSES
+//#define DEBUG_PULSES
+
+// HexOutput defines if the serial input/ouput are Hex bytes (e.g. to communicate with ESP8266) or a Hex string (e.g.to communicate with the Arduino IDE serail monitor).
+// Leave the line uncommented to communicate using Hex bytes, or comment it to communicate using Hex strings.
+#define HexOutput
 
 const byte OUTPUT_PIN = 2;
 const byte INPUT_PIN = 3;
@@ -11,6 +15,11 @@ volatile byte pulseBuffer[PULSE_BUFFER_SIZE];
 
 #ifdef DEBUG_PULSES
 String pulseLengths;
+#endif
+
+#ifdef HexOutput
+const byte numByteBuffer = 16; //UART RX Buffer size
+const char endMarker = 0x0A; //UART command delimiter (RX)
 #endif
 
 void setup()
@@ -46,7 +55,9 @@ void busChange()
   int timeLow = timeNow - timeLowTransition;
 
   if ((bufferWritePosition + 1) % PULSE_BUFFER_SIZE == bufferReadPosition) {
+#if !defined(HexOutput)
     Serial.println(F("Pulse buffer overflow when receiving data"));
+#endif
     return;
   }
 
@@ -77,16 +88,18 @@ void processSlinkInput()
 #endif
 
     if (timeLow > 2000) {
-      // 2400 us -> new data sequence
-
+      // 2400 us -> new data sequence               
       if (partialOutput) {
+#ifdef HexOutput 
+        Serial.write(0x0A);
+#else
         if (currentBit != 0) {
           Serial.print(F("!Discarding "));
           Serial.print(currentBit);
           Serial.print(F(" stray bits"));
         }
-
         Serial.print('\n');
+#endif
         partialOutput = false;
       }
 
@@ -106,17 +119,25 @@ void processSlinkInput()
     }
 
     if (currentBit == 8) {
+
+#ifdef HexOutput
+      Serial.write(currentByte);
+#else
       if (currentByte <= 0xF) {
         Serial.print(0, HEX);
       }
       Serial.print(currentByte, HEX);
-
+#endif
       currentBit = 0;
     }
   }
 
   if (partialOutput && isBusIdle()) {
+#ifdef HexOutput
+    Serial.write(0x0A);
+#else
     Serial.print('\n');
+#endif
     partialOutput = false;
   }
 }
@@ -190,6 +211,38 @@ bool sendCommand(byte command[], int commandLength)
 
 void processSerialInput()
 {
+#ifdef HexOutput
+  static byte ByteBuffer[numByteBuffer];
+  static boolean newData = false;
+  static int BufferIndex = 0;
+  byte ReadByte;
+  
+  while (Serial.available() > 0 && newData == false) {
+      ReadByte = Serial.read();
+      if (ReadByte != endMarker) {
+        ByteBuffer[BufferIndex] = ReadByte;
+        BufferIndex++;
+        if (BufferIndex >= numByteBuffer) {
+          BufferIndex = numByteBuffer - 1;
+        }
+      }
+      else {
+        newData = true;
+      }
+    }
+  if (newData == true) {
+    byte commandBytes[BufferIndex];
+    for (int i = 0; i <= BufferIndex - 1 ; ++i) {
+      commandBytes[i] = ByteBuffer[i];
+    }
+
+    if (sendCommand(commandBytes, BufferIndex)) {
+    // If sendCommand is successful read setup to read the next command from the Serial
+      newData = false;
+      BufferIndex = 0;
+    }
+  }
+#else
   static String bytesReceived;
 
   while (Serial.available()) {
@@ -233,7 +286,8 @@ void processSerialInput()
   if (!sendCommand(commandBytes, sizeof(commandBytes))) {
     // If send fails, re-queue command
     bytesReceived = command + "\n" + bytesReceived;
-  }
+  } 
+#endif
 }
 
 void loop()
