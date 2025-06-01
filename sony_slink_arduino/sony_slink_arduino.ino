@@ -29,7 +29,7 @@ void setup()
   pinMode(INPUT_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(INPUT_PIN), busChange, CHANGE);
 
-  Serial.begin(115200);
+  Serial.begin(9600);
 }
 
 // This interrupt handler receives data from a remote slink device
