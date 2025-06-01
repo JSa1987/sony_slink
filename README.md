@@ -1,22 +1,16 @@
 sony_slink
 ==========
 
-This Arduino sketch is entirely based on the great work from 
-These are Arduino sketches to interface with Sony equipment using the
-S-Link/Control A1 protocols. There are two sketches here:
-* Target Arduino, USB serial communication
-* Target ESP8266, wifi + websocket communication
+This Arduino sketch is entirely based on the great work from [robho](https://github.com/robho/sony_slink). The only change is that the modified to allows the option of communicating over serial using raw Hex bytes. This is achieved by defining the 'HexOutput' option at the beginning of the code (if this is not defined the code behaves as the original code). 
 
-I'm using this to control and read information from a Sony CDP-CX225 CD Player.
+I'm using this to control and read information from a Sony CDP-CX225 CD Player, and interfacing this with ESPHome using a ESP8266.
 
-To physically connect an Arduino device to the S-Link bus you need
-some additional components. Here's a schematic for the Arduino (ESP8266 is similar, but uses different pins):
-
+To physically connect the Arduino to the Sony via the S-Link bus and to the ESP8266 running ESPHome you need some additional components, below is the schematic.
 ![circuit](circuit.png)
 
-Use a 3.5 mm mono plug to connect the Arduino/ESP8266 to the S-Link/Control A1 port of the Sony equipment and connect the Arduino to a USB port in your computer for power and serial communication.
+Use a 3.5 mm mono plug to connect the circuite to the S-Link/Control A1 port of the Sony device.
 
-The S-Link_CDP-CX225.ods file lists the commands I have found work with the CDP-CX225.
+The S-Link_CDP-CX225.ods file in the 'Supported Commands' folder lists the commands I have found work with the CDP-CX225.
 
 ----
 
